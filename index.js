@@ -5,6 +5,11 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL ERROR: JWT_SECRET is not defined.');
+    // Don't exit process in lambda as it might restart loop, but definitely clear error
+}
+
 // Middleware
 app.use(cors());
 app.use(express.json());
