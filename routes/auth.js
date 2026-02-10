@@ -16,8 +16,8 @@ router.post('/register', async (req, res) => {
         }
 
         // Check if user already exists
-        const [existingUsers] = await db.query(
-            'SELECT * FROM users WHERE email = ? OR username = ?',
+        const { rows: existingUsers } = await db.query(
+            'SELECT * FROM users WHERE email = $1 OR username = $2',
             [email, username]
         );
 
@@ -29,14 +29,14 @@ router.post('/register', async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert user
-        const [result] = await db.query(
-            'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
+        const { rows: result } = await db.query(
+            'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id',
             [username, email, hashedPassword]
         );
 
         // Generate JWT
         const token = jwt.sign(
-            { id: result.insertId, username, email },
+            { id: result[0].id, username, email },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -44,7 +44,7 @@ router.post('/register', async (req, res) => {
         res.status(201).json({
             message: 'User registered successfully',
             token,
-            user: { id: result.insertId, username, email }
+            user: { id: result[0].id, username, email }
         });
     } catch (error) {
         console.error('Registration error:', error);
@@ -65,7 +65,7 @@ router.post('/login', async (req, res) => {
         }
 
         // Find user
-        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        const { rows: users } = await db.query('SELECT * FROM users WHERE email = $1', [email]);
 
         if (users.length === 0) {
             return res.status(401).json({ error: 'Invalid credentials' });

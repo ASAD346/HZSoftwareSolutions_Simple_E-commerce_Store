@@ -1,82 +1,39 @@
-# E-Commerce Store Setup Guide
+# Premium E-Commerce Store - Deployment Guide (Supabase + Netlify)
 
-## Prerequisites
-- Node.js (v14 or higher)
-- MySQL Server (v5.7 or higher)
+## Tech Stack
+- **Backend**: Node.js, Express (Serverless compatible)
+- **Database**: PostgreSQL (Supabase)
+- **Frontend**: Vanilla JS, Glassmorphism CSS
+- **Deployment**: Netlify (Functions + Static Hosting)
 
-## Setup Instructions
+## Setup Instructions for Live Deployment
 
-### 1. Database Setup
+### 1. Supabase (Database) Setup
+1. Create a project on [Supabase.com](https://supabase.com).
+2. Go to the **SQL Editor**.
+3. Copy the contents of `schema_postgres.sql` from this repo and run it.
+4. Go to **Settings -> Database** and copy your **URI** connection string.
 
-**Option A: Using MySQL Command Line**
-```bash
-# Login to MySQL
-mysql -u root -p
+### 2. Netlify (Hosting) Setup
+1. Create a site on [Netlify](https://netlify.com) from your Git repository.
+2. Go to **Site Settings -> Environment Variables**.
+3. Add the following variables:
+   - `DATABASE_URL`: Your Supabase connection URI.
+   - `JWT_SECRET`: A long random string (e.g., `supersecretkey123`).
+   - `PORT`: `5000` (optional, used for local testing).
 
-# Run the schema file
-source schema.sql
-```
-
-**Option B: Using MySQL Workbench**
-1. Open MySQL Workbench
-2. Connect to your MySQL server
-3. Open the `schema.sql` file
-4. Execute the script
-
-### 2. Configure Environment Variables
-
-Edit the `.env` file with your MySQL credentials:
-```
-PORT=5000
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=ecommerce_db
-JWT_SECRET=supersecretkey123
-```
-
-### 3. Start the Server
-
-```bash
-npm start
-```
-
-The server will start at `http://localhost:5000`
-
-### 4. Access the Application
-
-Open your browser and navigate to:
-```
-http://localhost:5000
-```
+## Local Development
+1. Install dependencies: `npm install`
+2. Create a `.env` file with `DATABASE_URL` and `JWT_SECRET`.
+3. Run the server: `npm run dev`
 
 ## Features
+✅ **PostgreSQL Powered**: High-performance, reliable relational data.
+✅ **Serverless Ready**: Fully optimized for Netlify Functions.
+✅ **Cyberpunk UI**: Ultra-premium glassmorphism design.
+✅ **Secure**: JWT-based auth and bcrypt password hashing.
 
-✅ **User Authentication**
-- Register new accounts
-- Login with JWT token authentication
-- Secure password hashing with bcrypt
-
-✅ **Product Browsing**
-- View all available products
-- See product details, prices, and stock
-- Real-time stock updates
-
-✅ **Shopping Cart**
-- Add/remove products
-- Adjust quantities
-- Persistent cart (localStorage)
-
-✅ **Order Processing**
-- Secure checkout with authentication
-- Stock validation
-- Transaction-based order creation
-
-✅ **Premium UI/UX**
-- Glassmorphism design
-- Smooth animations
-- Responsive layout
-- Cyberpunk neon aesthetics
+---
 
 ## API Endpoints
 
@@ -86,35 +43,7 @@ http://localhost:5000
 
 ### Products
 - `GET /api/products` - Get all products
-- `GET /api/products/:id` - Get product by ID
 
 ### Orders
-- `POST /api/orders` - Create new order (requires auth)
-- `GET /api/orders/my-orders` - Get user's orders (requires auth)
-
-### Health Check
-- `GET /api/health` - Server health status
-
-## Troubleshooting
-
-**Database Connection Error:**
-- Verify MySQL is running
-- Check credentials in `.env`
-- Ensure `ecommerce_db` database exists
-
-**Port Already in Use:**
-- Change `PORT` in `.env` to another port (e.g., 5001)
-
-**Products Not Loading:**
-- Verify schema.sql was executed
-- Check browser console for errors
-- Ensure server is running
-
-## Default Test Products
-
-The database comes pre-seeded with 5 premium tech products:
-1. Cyberpunk Headphones - $199.99
-2. Aura Keypad - $129.50
-3. Void Mouse - $89.00
-4. Nebula Lens - $499.00
-5. Prism Desk Mat - $35.00
+- `POST /api/orders` - Create order (Auth required)
+- `GET /api/orders/my-orders` - Order history (Auth required)

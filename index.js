@@ -24,6 +24,11 @@ app.use('/api/products', productRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 
-app.listen(PORT, () => {
-    console.log(`Server is breathing at http://localhost:${PORT}`);
-});
+// Start Server
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server is breathing at http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;

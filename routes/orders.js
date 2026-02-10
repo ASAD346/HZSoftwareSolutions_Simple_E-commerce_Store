@@ -24,7 +24,7 @@ const authenticateToken = (req, res, next) => {
 
 // Create a new order
 router.post('/', authenticateToken, async (req, res) => {
-    const connection = await db.getConnection();
+    const client = await db.connect();
     try {
         const { items } = req.body; // items: [{ product_id, quantity }, ...]
         const userId = req.user.id;
@@ -33,33 +33,33 @@ router.post('/', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Order must contain at least one item' });
         }
 
-        await connection.beginTransaction();
+        await client.query('BEGIN');
 
         // Calculate total price and verify stock
         let totalPrice = 0;
         const orderItems = [];
 
         for (const item of items) {
-            const [products] = await connection.query(
-                'SELECT * FROM products WHERE id = ?',
+            const { rows: products } = await client.query(
+                'SELECT * FROM products WHERE id = $1',
                 [item.product_id]
             );
 
             if (products.length === 0) {
-                await connection.rollback();
+                await client.query('ROLLBACK');
                 return res.status(404).json({ error: `Product ${item.product_id} not found` });
             }
 
             const product = products[0];
 
             if (product.stock < item.quantity) {
-                await connection.rollback();
+                await client.query('ROLLBACK');
                 return res.status(400).json({
                     error: `Insufficient stock for ${product.name}. Available: ${product.stock}`
                 });
             }
 
-            const itemTotal = product.price * item.quantity;
+            const itemTotal = Number(product.price) * item.quantity;
             totalPrice += itemTotal;
 
             orderItems.push({
@@ -69,29 +69,29 @@ router.post('/', authenticateToken, async (req, res) => {
             });
 
             // Update stock
-            await connection.query(
-                'UPDATE products SET stock = stock - ? WHERE id = ?',
+            await client.query(
+                'UPDATE products SET stock = stock - $1 WHERE id = $2',
                 [item.quantity, item.product_id]
             );
         }
 
         // Create order
-        const [orderResult] = await connection.query(
-            'INSERT INTO orders (user_id, total_price, status) VALUES (?, ?, ?)',
+        const { rows: orderResult } = await client.query(
+            'INSERT INTO orders (user_id, total_price, status) VALUES ($1, $2, $3) RETURNING id',
             [userId, totalPrice, 'confirmed']
         );
 
-        const orderId = orderResult.insertId;
+        const orderId = orderResult[0].id;
 
         // Create order items
         for (const item of orderItems) {
-            await connection.query(
-                'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)',
+            await client.query(
+                'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)',
                 [orderId, item.product_id, item.quantity, item.price]
             );
         }
 
-        await connection.commit();
+        await client.query('COMMIT');
 
         res.status(201).json({
             message: 'Order created successfully',
@@ -99,11 +99,11 @@ router.post('/', authenticateToken, async (req, res) => {
             totalPrice
         });
     } catch (error) {
-        await connection.rollback();
+        await client.query('ROLLBACK');
         console.error('Error creating order:', error);
         res.status(500).json({ error: 'Server error creating order' });
     } finally {
-        connection.release();
+        client.release();
     }
 });
 
@@ -112,16 +112,16 @@ router.get('/my-orders', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const [orders] = await db.query(
+        const { rows: orders } = await db.query(
             `SELECT o.*, 
-                    GROUP_CONCAT(
+                    STRING_AGG(
                         CONCAT(p.name, ' (x', oi.quantity, ')')
-                        SEPARATOR ', '
+                        , ', '
                     ) as items
              FROM orders o
              LEFT JOIN order_items oi ON o.id = oi.order_id
              LEFT JOIN products p ON oi.product_id = p.id
-             WHERE o.user_id = ?
+             WHERE o.user_id = $1
              GROUP BY o.id
              ORDER BY o.created_at DESC`,
             [userId]

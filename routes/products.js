@@ -6,7 +6,7 @@ const router = express.Router();
 // Get all products
 router.get('/', async (req, res) => {
     try {
-        const [products] = await db.query('SELECT * FROM products ORDER BY created_at DESC');
+        const { rows: products } = await db.query('SELECT * FROM products ORDER BY created_at DESC');
         res.json(products);
     } catch (error) {
         console.error('Error fetching products:', error);
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const [products] = await db.query('SELECT * FROM products WHERE id = ?', [id]);
+        const { rows: products } = await db.query('SELECT * FROM products WHERE id = $1', [id]);
 
         if (products.length === 0) {
             return res.status(404).json({ error: 'Product not found' });
